@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "ifoam-denver"
+packages = [{include = "ifoam_denver"}]
+version = "0.1"
+description = "OpenFOAM Development Environment"
+authors = ["Iydon Liang <liangiydon@gmail.com>"]
+keywords = ["OpenFOAM", "utilities"]
+readme = "README.md"
+license = "GPL-3.0-only"
+homepage = "https://github.com/iydon/ifoam-denver"
+repository = "https://github.com/iydon/ifoam-denver"
+classifiers = [
+    "Environment :: Console",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: Chinese (Simplified)",
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Utilities",
+    "Typing :: Typed",
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/iydon/ifoam-denver/issues"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
