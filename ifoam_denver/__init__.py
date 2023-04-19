@@ -1,1 +1,4 @@
-import __hello__
+__all__ = ['template']
+
+
+from . import template
