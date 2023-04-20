@@ -148,7 +148,7 @@ class Dockerfile:
         self._lines += lines
         return self
 
-    def _as_posix(self, path: str) -> str:
+    def _as_posix(self, path: Path) -> str:
         return p.Path(path).as_posix()
 
     def _md5(self, text: str) -> str:

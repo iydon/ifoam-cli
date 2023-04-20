@@ -11,7 +11,10 @@ if t.TYPE_CHECKING:
 def last(text: str, sep: str = '.') -> str:
     return text.rsplit(sep, maxsplit=1)[-1]
 
+def pure(command: str, **kwargs: 'Kwargs') -> sp.CompletedProcess:
+    return sp.run(command, shell=True, **kwargs)
+
 def run(command: str, **kwargs: 'Kwargs') -> None:
-    cp = sp.run(command, shell=True, **kwargs)
+    cp = pure(command, **kwargs)
 
     assert cp.returncode == 0, cp.stderr
