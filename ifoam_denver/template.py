@@ -15,6 +15,38 @@ if t.TYPE_CHECKING:
 
 class Dockerfile:
     '''Template for Dockerfile
+
+    Examples:
+        >>> d = Dockerfile('todo')
+        >>> text = d \\
+        ...     .from_ubuntu('20.04') \\
+        ...     .arg_default() \\
+        ...     .expose(7101) \\
+        ...     .workdir_default() \\
+        ...     .copy_default() \\
+        ...     .run(d.run_update(), d.run_install('curl', 'ca-certificates', 'vim')) \\
+        ...     .run(
+        ...         d.run_download_bash('https://dl.openfoam.com/add-debian-repo.sh'),
+        ...         d.run_update(), d.run_install(f'openfoam2012-default'),
+        ...     ) \\
+        ...     .render()
+        >>> print(text.strip())
+        FROM ubuntu:20.04
+        <BLANKLINE>
+        ARG DEBIAN_FRONTEND=noninteractive
+        <BLANKLINE>
+        EXPOSE 7101
+        <BLANKLINE>
+        WORKDIR /root
+        <BLANKLINE>
+        COPY todo/copy denver
+        <BLANKLINE>
+        RUN apt-get update && \\
+            apt-get -y install --no-install-recommends curl ca-certificates vim
+        <BLANKLINE>
+        RUN bash denver/968654f0cfe5785342356718fcfd1fb5/add-debian-repo.sh && \\
+            apt-get update && \\
+            apt-get -y install --no-install-recommends openfoam2012-default
     '''
 
     def __init__(self, directory: Path) -> None:
@@ -22,6 +54,7 @@ class Dockerfile:
         self._src = self._directory / 'copy'
         self._dst = p.Path('denver')
         self._lines: t.List[str] = []
+        self._flag: t.Dict[str, bool] = {}
 
     def __repr__(self) -> str:
         return self.render()
@@ -29,8 +62,10 @@ class Dockerfile:
     def render(self) -> str:
         return '\n\n'.join(self._lines) + '\n'
 
-    def save(self, filename: str = 'Dockerfile') -> None:
-        (self._directory/filename).write_text(self.render())
+    def save(self, filename: str = 'Dockerfile') -> p.Path:
+        path = self._directory / filename
+        path.write_text(self.render())
+        return path
 
     def arg(self, *names: str) -> 'te.Self':
         return self._appends([f'ARG {name}' for name in names])
@@ -44,9 +79,26 @@ class Dockerfile:
     def copy_default(self) -> 'te.Self':
         return self.copy(self._src, self._dst)
 
-    def entrypoint(self, *commands: str) -> 'te.Self':
-        line = ' && \\\n    '.join(commands)
-        return self._append(f'ENTRYPOINT {line}')
+    def entrypoint(self, *commands: t.List[str]) -> 'te.Self':
+        assert not self._flag.get('entrypoint', False)
+
+        self._flag['entrypoint'] = True
+        self.entrypoint_update(*commands, mode='w')
+        return self._append(f'ENTRYPOINT bash {(self._dst/"startup.sh").as_posix()}')
+
+    def entrypoint_update(self, *commands: t.List[str], mode: str = 'a+') -> 'te.Self':
+        (self._src/'log').mkdir(parents=True, exist_ok=True)
+        with open(self._src/'startup.sh', mode) as f:
+            for command in map(' && \\\n    '.join, commands):
+                md5 = self._md5(command)
+                out, err = self._dst/'log'/f'{md5}.out', self._dst/'log'/f'{md5}.err'
+                f.write(f'{command} \\\n    1>{out.as_posix()} 2>{err.as_posix()} &\n')
+        return self
+
+    def entrypoint_sleep(self) -> 'te.Self':
+        with open(self._src/'startup.sh', 'a+') as f:
+            f.write('sleep infinity\n')
+        return self
 
     def expose(self, *ports: t.Union[int, str]) -> 'te.Self':
         return self._appends([f'EXPOSE {port}' for port in ports])
@@ -74,7 +126,7 @@ class Dockerfile:
         return f'apt-get -y install --no-install-recommends {" ".join(packages)}'
 
     def run_download(self, url: str, overwrite: bool = False) -> str:
-        md5 = hashlib.md5(url.encode()).hexdigest()
+        md5 = self._md5(url)
         name = url.rsplit('/', maxsplit=1)[-1]
         path = self._src / md5 / name
         if overwrite or not path.exists():
@@ -98,3 +150,6 @@ class Dockerfile:
 
     def _as_posix(self, path: str) -> str:
         return p.Path(path).as_posix()
+
+    def _md5(self, text: str) -> str:
+        return hashlib.md5(text.encode()).hexdigest()
